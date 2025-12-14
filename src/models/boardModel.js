@@ -15,7 +15,7 @@ const BOARD_COLLECTION_SCHEMA = Joi.object({
   description: Joi.string().required().min(3).max(256).trim().strict(),
   type: Joi.string().valid(BOARD_TYPE.PUBLIC, BOARD_TYPE.PRIVATE).required(),
 
-  columnOderIds: Joi.array().items(
+  columnOrderIds: Joi.array().items(
     Joi.string().pattern(OBJECT_ID_RULE).message(OBJECT_ID_RULE_MESSAGE)
   ).default([]),
 
@@ -68,11 +68,24 @@ const getDetails = async (id) => {
   } catch (error) { throw new Error(error)}
 }
 
-export const BoardModel = {
+// push một cái columnId vào cuối mảng columnOrderIds của board
+const pushColumnOrderIds = async (column) => {
+  try {
+    const result = await GET_DB().collection(BOARD_COLLECTION_NAME).findOneAndUpdate(
+      { _id: new ObjectId(column.boardId) },
+      { $push: { columnOrderIds: new ObjectId(column._id) } },
+      { returnDocument: 'after' }
+    )
+    return result.value
+  } catch (error) { throw new Error(error) }
+}
+
+export const boardModel = {
   BOARD_COLLECTION_NAME,
   BOARD_COLLECTION_SCHEMA,
   createNew,
   findOneById,
-  getDetails
+  getDetails,
+  pushColumnOrderIds
 }
 
