@@ -8,7 +8,7 @@ import { WEBSITE_DOMAIN } from '~/utils/constants'
 import { BrevoProvider } from '~/providers/BrevoProvider'
 import { env } from '~/config/environment'
 import { jwtProvider } from '~/providers/JwtProvider'
-
+import { CloudinaryProvider } from '~/providers/CloudinaryProvider'
 const createNew = async (reqBody) => {
   try {
     // Kiểm tra xem email đã tồn tại trong hệ thống của chúng ta hay chưa
@@ -128,7 +128,7 @@ const refreshToken = async (clientRefreshToken) => {
   } catch (error) { throw error }
 }
 
-const update = async (userId, reqBody) => {
+const update = async (userId, reqBody, userAvatarFile) => {
   try {
     // query user và liểm tra cho chắc chắn
     const existUser = await userModel.findOneById(userId)
@@ -147,6 +147,14 @@ const update = async (userId, reqBody) => {
       }
       // nếu như current_password đúng thì mới cho phép update password mới
       updatedUser = await userModel.update(existUser._id, { password: bcryptjs.hashSync(reqBody.new_password, 8) })
+    } else if (userAvatarFile) {
+      // trường hợp update avatar
+      const uploadResult = await CloudinaryProvider.streamUpload(userAvatarFile.buffer, 'trello-clone/users')
+      // console.log('uploadResult: ', uploadResult)
+
+      // lưu lại url của ảnh đã upload lên cloudinary vào database
+      updatedUser = await userModel.update(existUser._id, { avatar: uploadResult.secure_url })
+
     } else {
       // trường hợp update các thông tin chung
       updatedUser = await userModel.update(existUser._id, reqBody)
