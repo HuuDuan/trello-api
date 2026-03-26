@@ -64,7 +64,7 @@ const update = async (userId, updateDate) => {
       { $set: updateDate },
       { returnDocument: 'after' }
     )
-    return result.value
+    return result
   } catch (error) { throw new Error(error)}
 }
 
