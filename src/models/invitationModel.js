@@ -3,6 +3,8 @@ import { ObjectId } from 'mongodb'
 import { GET_DB } from '~/config/mongodb'
 import { OBJECT_ID_RULE, OBJECT_ID_RULE_MESSAGE } from '~/utils/validators'
 import { INVITATION_TYPES, BOARD_INVITATION_STATUS } from '~/utils/constants'
+import { userModel } from './userModel'
+import { boardModel } from './boardModel'
 
 const INVITATION_COLLECTION_NAME = 'invitations'
 const INVITATION_COLLECTION_SCHEMA = Joi.object({
@@ -17,7 +19,8 @@ const INVITATION_COLLECTION_SCHEMA = Joi.object({
   }).optional(),
 
   createdAt: Joi.date().timestamp('javascript').default(Date.now),
-  updatedAt: Joi.date().timestamp('javascript').default(null)
+  updatedAt: Joi.date().timestamp('javascript').default(null),
+  _destroy: Joi.boolean().default(false)
 })
 
 // Chỉ định ra những Fields mà chúng ta không muốn cho phép cập nhật trong hàm update()
@@ -88,11 +91,60 @@ const update = async (invitationId, updateData) => {
   }
 }
 
+const findByUser = async (userId) => {
+  try {
+    const userObjectId = new ObjectId(userId)
+    const results = await GET_DB().collection(INVITATION_COLLECTION_NAME).aggregate([
+      {
+        $match: {
+          $and: [
+            {
+              $or: [
+                { _destroy: false },
+                { _destroy: { $exists: false } }
+              ]
+            },
+            {
+              $or: [
+                { inviteeId: userObjectId },
+                { inviterId: userObjectId },
+                { inviteeId: userId },
+                { inviterId: userId }
+              ]
+            }
+          ]
+        }
+      },
+      { $lookup: {
+        from: userModel.USER_COLLECTION_NAME,
+        localField: 'inviterId',
+        foreignField: '_id',
+        as: 'inviter',
+        pipeline: [{ $project: { 'password': 0, 'verifyToken': 0 } }]
+      } },
+      { $lookup: {
+        from: userModel.USER_COLLECTION_NAME,
+        localField: 'inviteeId',
+        foreignField: '_id',
+        as: 'invitee',
+        pipeline: [{ $project: { 'password': 0, 'verifyToken': 0 } }]
+      } },
+      { $lookup: {
+        from: boardModel.BOARD_COLLECTION_NAME,
+        localField: 'boardInvitation.boardId',
+        foreignField: '_id',
+        as: 'board'
+      } }
+    ]).toArray()
+    return results
+  } catch (error) { throw new Error(error)}
+}
 
 export const invitationModel = {
   INVITATION_COLLECTION_NAME,
   INVITATION_COLLECTION_SCHEMA,
   createNewBoardInvitation,
   findOneById,
-  update
+  update,
+  findByUser
 }
