@@ -107,9 +107,7 @@ const findByUser = async (userId) => {
             {
               $or: [
                 { inviteeId: userObjectId },
-                { inviterId: userObjectId },
-                { inviteeId: userId },
-                { inviterId: userId }
+                { inviterId: userObjectId }
               ]
             }
           ]

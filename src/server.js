@@ -9,6 +9,9 @@ import { env } from '~/config/environment'
 import { APIs_V1 } from '~/routes/v1'
 import { errorHandlingMiddleware } from '~/middlewares/errorHandlingMiddleware'
 import cookieParser from 'cookie-parser'
+import socketIo from 'socket.io'
+import http from 'http'
+import { inviteUserToBoardSocket } from './sockets/inviteUserToBoardSocket'
 
 const START_SEVER = () => {
   const app = express()
@@ -32,7 +35,16 @@ const START_SEVER = () => {
   // Middleware xử lý lỗi tập trung
   app.use(errorHandlingMiddleware)
 
-  app.listen(env.APP_PORT, env.APP_HOST, () => {
+  // Tạo một cái server mới bọc app của express để làm real-time với socket.io
+  const server = http.createServer(app)
+  const io = socketIo(server, {
+    cors: corsOptions
+  })
+  io.on('connection', (socket) => {
+    inviteUserToBoardSocket(socket)
+  })
+
+  server.listen(env.APP_PORT, env.APP_HOST, () => {
     console.log(`3. Hello ${env.AUTHOR}, Back-end sever is running successfully at Host: ${env.APP_HOST} and Port:${env.APP_PORT}`)
   })
 
